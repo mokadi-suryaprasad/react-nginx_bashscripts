@@ -1,6 +1,4 @@
 #!/bin/bash
-sudo docker container prune -f && sudo docker image prune -a -f && sudo docker volume prune -f && sudo docker network prune -f && sudo docker system prune -a -f
-##this above step is not recommned step, i am deleting existing images to save space
 sudo rm -r gold
 sudo mkdir gold
 cd gold/
