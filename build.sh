@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # -------- CONFIG --------
-DOCKER_USERNAME="suryaprasad9773"      
+DOCKER_USERNAME="suryaprasad9773"
 REPO_NAME="react-app"
 IMAGE_NAME="react-nginx"
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
@@ -31,12 +31,20 @@ else
     cd react-project
 fi
 
-echo "🔐 Verifying Docker login..."
-LOGGED_IN_USER=$(docker info --format '{{.AuthConfig.Username}}' 2>/dev/null || echo "none")
+CURRENT_USER=$(whoami)
+echo "👤 Script running as user: $CURRENT_USER"
 
-if [ "$LOGGED_IN_USER" != "$DOCKER_USERNAME" ]; then
-  echo "❌ ERROR: Docker is logged in as '$LOGGED_IN_USER'. Expected: '$DOCKER_USERNAME'"
-  exit 1
+if [ "${SKIP_DOCKER_LOGIN_CHECK:-false}" != "true" ]; then
+  echo "🔐 Verifying Docker login for user '$CURRENT_USER'..."
+  LOGGED_IN_USER=$(docker info --format '{{.AuthConfig.Username}}' 2>/dev/null || echo "none")
+  if [ "$LOGGED_IN_USER" != "$DOCKER_USERNAME" ]; then
+    echo "❌ ERROR: Docker is logged in as '$LOGGED_IN_USER'. Expected: '$DOCKER_USERNAME'"
+    echo "💡 Hint: Run the script as user '$DOCKER_USERNAME' who is logged in to Docker, or login Docker using:"
+    echo "   docker login"
+    exit 1
+  fi
+else
+  echo "⚠️ Skipping Docker login check due to SKIP_DOCKER_LOGIN_CHECK=$SKIP_DOCKER_LOGIN_CHECK"
 fi
 
 echo "🐳 Building Docker image without cache..."
@@ -49,11 +57,6 @@ docker tag "$IMAGE_NAME" "$DOCKER_IMAGE"
 
 echo "📤 Pushing image to Docker Hub..."
 docker push "$DOCKER_IMAGE"
-
-#echo "🔍 Getting image digest..."
-#DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$DOCKER_IMAGE" || echo "$DOCKER_IMAGE")
-
-#echo "✅ Image pushed: $DIGEST"
 
 echo "📝 Updating Kubernetes deployment with new image tag..."
 echo "DEBUG: Deployment file path is $DEPLOYMENT_FILE"
