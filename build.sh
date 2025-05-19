@@ -11,7 +11,7 @@ IMAGE_TAG="$TIMESTAMP"
 CLONE_DIR="$HOME/gold"
 REPO_DIR="$CLONE_DIR/react-project"
 GITHUB_USER="mokadi-suryaprasad"
-GIT_REPO="https://github.com/$GITHUB_USER/react-project.git"
+GIT_REPO="git@github.com:$GITHUB_USER/react-project.git"
 DOCKERFILE="golddockerfile"
 DEPLOYMENT_FILE="$REPO_DIR/kubernetes-manifestfiles/react-deployment.yaml"
 # ------------------------
