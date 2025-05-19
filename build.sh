@@ -50,10 +50,10 @@ docker tag "$IMAGE_NAME" "$DOCKER_IMAGE"
 echo "📤 Pushing image to Docker Hub..."
 docker push "$DOCKER_IMAGE"
 
-echo "🔍 Getting image digest..."
-DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$DOCKER_IMAGE" || echo "$DOCKER_IMAGE")
+#echo "🔍 Getting image digest..."
+#DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$DOCKER_IMAGE" || echo "$DOCKER_IMAGE")
 
-echo "✅ Image pushed: $DIGEST"
+#echo "✅ Image pushed: $DIGEST"
 
 echo "📝 Updating Kubernetes deployment with new image tag..."
 echo "DEBUG: Deployment file path is $DEPLOYMENT_FILE"
