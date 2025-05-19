@@ -14,13 +14,14 @@ GITHUB_USER="mokadi-suryaprasad"
 GIT_REPO="git@github.com:$GITHUB_USER/react-project.git"
 DOCKERFILE="golddockerfile"
 DEPLOYMENT_FILE="$REPO_DIR/kubernetes-manifestfiles/react-deployment.yaml"
+BRANCH="main"
 # ------------------------
 
 echo "📁 Checking source code directory..."
 if [ -d "$REPO_DIR/.git" ]; then
     echo "📂 Directory exists. Pulling latest changes..."
     cd "$REPO_DIR"
-    git pull origin main
+    git pull origin "$BRANCH"
 else
     echo "📥 Cloning Git repository..."
     mkdir -p "$CLONE_DIR"
@@ -52,13 +53,16 @@ if [ ! -f "$DEPLOYMENT_FILE" ]; then
   exit 1
 fi
 
-# Update the image tag in the deployment YAML
-sed -i.bak "s|image:.*|image: $DOCKER_IMAGE|" "$DEPLOYMENT_FILE"
+# More specific image update to avoid replacing unintended lines
+sed -i.bak "s|image: $DOCKER_USERNAME/$IMAGE_NAME:.*|image: $DOCKER_IMAGE|" "$DEPLOYMENT_FILE"
 
-echo "📥 Committing updated deployment manifest..."
 cd "$REPO_DIR"
-git add "$DEPLOYMENT_FILE"
-git commit -m "Updated deployment image to $IMAGE_TAG"
-git push origin main
+if git diff --quiet; then
+  echo "No changes detected in deployment manifest. Skipping commit."
+else
+  git add "$DEPLOYMENT_FILE"
+  git commit -m "Updated deployment image to $IMAGE_TAG"
+  git push origin "$BRANCH"
+fi
 
 echo "✅ Kubernetes deployment manifest updated and pushed successfully."
