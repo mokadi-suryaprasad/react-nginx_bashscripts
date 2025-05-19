@@ -3,7 +3,7 @@
 set -e
 
 # -------- CONFIG --------
-DOCKER_USERNAME="suryaprasad9773"        # Docker Hub username
+DOCKER_USERNAME="suryaprasad9773"
 REPO_NAME="react-app"
 IMAGE_NAME="react-nginx"
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
@@ -31,12 +31,9 @@ else
 fi
 
 echo "🐳 Building Docker image without cache..."
-docker build --no-cache -t "$IMAGE_NAME" -f "$DOCKERFILE" .
+docker build --no-cache -t "$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG" -f "$DOCKERFILE" .
 
 DOCKER_IMAGE="$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
-
-echo "🏷️ Tagging image as: $DOCKER_IMAGE"
-docker tag "$IMAGE_NAME" "$DOCKER_IMAGE"
 
 echo "📤 Pushing image to Docker Hub..."
 docker push "$DOCKER_IMAGE"
@@ -53,7 +50,7 @@ if [ ! -f "$DEPLOYMENT_FILE" ]; then
   exit 1
 fi
 
-# More specific image update to avoid replacing unintended lines
+# Update deployment YAML with new image tag
 sed -i.bak "s|image: $DOCKER_USERNAME/$IMAGE_NAME:.*|image: $DOCKER_IMAGE|" "$DEPLOYMENT_FILE"
 
 cd "$REPO_DIR"
