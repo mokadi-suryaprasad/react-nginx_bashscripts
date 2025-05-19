@@ -1,38 +1,64 @@
 #!/bin/bash
 
-# Step 1: Clean up and create a new directory called 'gold'
-sudo rm -r gold                     # Remove 'gold' directory if it exists
-sudo mkdir gold                      # Create a new 'gold' directory
-cd gold/                             # Change directory into 'gold'
+set -e
 
-# Step 2: Clone the GitHub repository
-sudo git clone https://github.com/mokadi-suryaprasad/Gold_Site_Ecommerce.git  # Clone the repository
+# -------- CONFIG --------
+DOCKER_USERNAME="suryaprasad9773"        # Docker Hub username
+REPO_NAME="react-app"
+IMAGE_NAME="react-nginx"
+TIMESTAMP=$(date +%Y%m%d%H%M%S)
+IMAGE_TAG="$TIMESTAMP"
+CLONE_DIR="$HOME/gold"
+REPO_DIR="$CLONE_DIR/react-project"
+GITHUB_USER="mokadi-suryaprasad"
+GIT_REPO="https://github.com/$GITHUB_USER/react-project.git"
+DOCKERFILE="golddockerfile"
+DEPLOYMENT_FILE="$REPO_DIR/kubernetes-manifestfiles/react-deployment.yaml"
+# ------------------------
 
-# Step 3: Get the latest commit hash
-cd Gold_Site_Ecommerce/              # Go into the cloned repository folder
-git_commit=$(sudo git rev-parse HEAD)  # Get the latest commit hash (shortened version)
+echo "📁 Checking source code directory..."
+if [ -d "$REPO_DIR/.git" ]; then
+    echo "📂 Directory exists. Pulling latest changes..."
+    cd "$REPO_DIR"
+    git pull origin main
+else
+    echo "📥 Cloning Git repository..."
+    mkdir -p "$CLONE_DIR"
+    cd "$CLONE_DIR"
+    git clone "$GIT_REPO"
+    cd react-project
+fi
 
-# Step 4: Build the Docker image
-sudo docker build -t react-nginx:$git_commit -f golddockerfile .  # Build Docker image with commit hash as tag
+echo "🐳 Building Docker image without cache..."
+docker build --no-cache -t "$IMAGE_NAME" -f "$DOCKERFILE" .
 
-# Step 5: Tag the Docker image for Docker Hub
-sudo docker tag react-nginx:$git_commit suryaprasad9773/react-nginx:$git_commit  # Tag the image for Docker Hub
+DOCKER_IMAGE="$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
 
-# Step 6: Push the image to Docker Hub
-# Make sure you've already run 'docker login' beforehand to authenticate
-sudo docker push suryaprasad9773/react-nginx:$git_commit  # Push the tagged image to Docker Hub
+echo "🏷️ Tagging image as: $DOCKER_IMAGE"
+docker tag "$IMAGE_NAME" "$DOCKER_IMAGE"
 
-# Step 7: Interact with AWS S3
-# Remove the old file from the S3 bucket
-aws s3 rm s3://gitcommitids1/new_value.txt
+echo "📤 Pushing image to Docker Hub..."
+docker push "$DOCKER_IMAGE"
 
-# Create a new 'new_value.txt' file to store the commit hash
-sudo touch new_value.txt
-sudo chmod 777 new_value.txt
-sudo echo $git_commit > new_value.txt  # Write the commit hash to the file
+echo "🔍 Getting image digest..."
+DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$DOCKER_IMAGE" || echo "$DOCKER_IMAGE")
 
-# Upload the new file to AWS S3
-aws s3 cp new_value.txt s3://gitcommitids1/  # Upload to S3
+echo "✅ Image pushed: $DIGEST"
 
-# Clean up by removing the temporary file
-sudo rm new_value.txt  # Delete 'new_value.txt' locally
+echo "📝 Updating Kubernetes deployment with new image tag..."
+echo "DEBUG: Deployment file path is $DEPLOYMENT_FILE"
+if [ ! -f "$DEPLOYMENT_FILE" ]; then
+  echo "❌ ERROR: Deployment file not found at $DEPLOYMENT_FILE"
+  exit 1
+fi
+
+# Update the image tag in the deployment YAML
+sed -i.bak "s|image:.*|image: $DOCKER_IMAGE|" "$DEPLOYMENT_FILE"
+
+echo "📥 Committing updated deployment manifest..."
+cd "$REPO_DIR"
+git add "$DEPLOYMENT_FILE"
+git commit -m "Updated deployment image to $IMAGE_TAG"
+git push origin main
+
+echo "✅ Kubernetes deployment manifest updated and pushed successfully."
