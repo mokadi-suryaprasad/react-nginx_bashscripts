@@ -1,81 +1,22 @@
 #!/bin/bash
 set -euo pipefail
 
-# -------- CONFIG --------
-DOCKER_USERNAME="suryaprasad9773"
-REPO_NAME="react-app"
-IMAGE_NAME="react-nginx"
-TIMESTAMP=$(date +%Y%m%d%H%M%S)
-IMAGE_TAG="$TIMESTAMP"
-CLONE_DIR="$HOME/gold"
-REPO_DIR="$CLONE_DIR/react-project"
-GITHUB_USER="mokadi-suryaprasad"
-GIT_REPO="https://github.com/mokadi-suryaprasad/react-project.git"
-DOCKERFILE="golddockerfile"
-DEPLOYMENT_FILE="$REPO_DIR/kubernetes-manifestfiles/react-deployment.yaml"
-BRANCH="main"
-# ------------------------
+# WARNING: Deleting all Docker images is not recommended in most cases!
+sudo docker rmi -f $(sudo docker images -q) || true
 
-echo "📁 Checking source code directory..."
-if [ -d "$REPO_DIR/.git" ]; then
-    echo "📂 Directory exists. Pulling latest changes..."
-    cd "$REPO_DIR"
-    git reset --hard
-    git clean -fd
-    git pull origin "$BRANCH"
-else
-    echo "📥 Cloning Git repository..."
-    mkdir -p "$CLONE_DIR"
-    cd "$CLONE_DIR"
-    git clone "$GIT_REPO"
-    cd react-project
-fi
+# WARNING: Removing entire 'gold' directory can cause data loss if not intended!
+sudo rm -rf gold || true
 
-CURRENT_USER=$(whoami)
-echo "👤 Script running as user: $CURRENT_USER"
+sudo mkdir -p gold
+cd gold/
 
-if [ "${SKIP_DOCKER_LOGIN_CHECK:-false}" != "true" ]; then
-  echo "🔐 Verifying Docker login for user '$CURRENT_USER'..."
-  LOGGED_IN_USER=$(docker info --format '{{.AuthConfig.Username}}' 2>/dev/null || echo "none")
-  if [ "$LOGGED_IN_USER" != "$DOCKER_USERNAME" ]; then
-    echo "❌ ERROR: Docker is logged in as '$LOGGED_IN_USER'. Expected: '$DOCKER_USERNAME'"
-    echo "💡 Hint: Run the script as user '$DOCKER_USERNAME' who is logged in to Docker, or login Docker using:"
-    echo "   docker login"
-    exit 1
-  fi
-else
-  echo "⚠️ Skipping Docker login check due to SKIP_DOCKER_LOGIN_CHECK=$SKIP_DOCKER_LOGIN_CHECK"
-fi
+sudo git clone https://github.com/mokadi-suryaprasad/react-project.git
+cd react-project/
 
-echo "🐳 Building Docker image without cache..."
-docker build --no-cache -t "$IMAGE_NAME" -f "$DOCKERFILE" .
+sudo docker build -t react-nginx -f golddockerfile .
 
-DOCKER_IMAGE="$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+# Tag the image with your Docker Hub username
+sudo docker tag react-nginx:latest suryaprasad9773/react-nginx:latest
 
-echo "🏷️ Tagging image as: $DOCKER_IMAGE"
-docker tag "$IMAGE_NAME" "$DOCKER_IMAGE"
-
-echo "📤 Pushing image to Docker Hub..."
-docker push "$DOCKER_IMAGE"
-
-echo "📝 Updating Kubernetes deployment with new image tag..."
-echo "DEBUG: Deployment file path is $DEPLOYMENT_FILE"
-if [ ! -f "$DEPLOYMENT_FILE" ]; then
-  echo "❌ ERROR: Deployment file not found at $DEPLOYMENT_FILE"
-  exit 1
-fi
-
-# More specific image update
-sed -i.bak "s|image: $DOCKER_USERNAME/$IMAGE_NAME:.*|image: $DOCKER_IMAGE|" "$DEPLOYMENT_FILE"
-
-cd "$REPO_DIR"
-if git diff --quiet; then
-  echo "🟡 No changes detected in deployment manifest. Skipping commit."
-else
-  git config user.name "$GITHUB_USER"
-  git config user.email "$GITHUB_USER@users.noreply.github.com"
-  git add "$DEPLOYMENT_FILE"
-  git commit -m "Updated deployment image to $IMAGE_TAG"
-  git push origin "$BRANCH"
-  echo "✅ Kubernetes deployment manifest updated and pushed."
-fi
+# Push to Docker Hub (make sure you logged in with `docker login`)
+sudo docker push suryaprasad9773/react-nginx:latest
