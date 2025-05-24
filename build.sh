@@ -35,12 +35,17 @@ gsutil -m cp -r build "gs://buildartifactorydemo/${current_date}/build"
 # Build and tag Docker image
 docker build -t suryaprasad9773/react-nginx:$git_commit -f golddockerfile .
 
+# Trivy Scan
+# -------------------------------------
+echo "[INFO] Running Trivy image scan..."
+trivy image --exit-code 1 --severity CRITICAL suryaprasad9773/react-nginx:$git_commit || {
+    echo "❌ Trivy scan failed due to HIGH or CRITICAL vulnerabilities."
+    exit 1
+}
+
 # Push image to DockerHub (already logged in)
 docker push suryaprasad9773/react-nginx:$git_commit
 
-# Optional: also tag as latest
-docker tag suryaprasad9773/react-nginx:$git_commit suryaprasad9773/react-nginx:latest
-docker push suryaprasad9773/react-nginx:latest
 
 # Save commit ID and upload to GCS (already authenticated)
 echo $git_commit > new_value.txt
