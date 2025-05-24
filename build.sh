@@ -17,6 +17,21 @@ cd react-project
 # Get latest commit ID
 git_commit=$(git rev-parse HEAD)
 
+# -------------------------------------
+# React build step
+# -------------------------------------
+echo "[INFO] Installing dependencies and building React app..."
+sudo npm install react-scripts
+npm install
+npm run build
+
+# Set permissions (optional)
+sudo chmod -R 777 build
+
+# Upload build folder to GCS (in a dated folder)
+current_date=$(date +%d%m%Y)
+gsutil -m cp -r build "gs://buildartifactorydemo/${current_date}/build"
+
 # Build and tag Docker image
 docker build -t suryaprasad9773/react-nginx:$git_commit -f golddockerfile .
 
