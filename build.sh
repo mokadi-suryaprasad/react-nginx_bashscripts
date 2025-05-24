@@ -46,12 +46,23 @@ trivy image --exit-code 1 --severity CRITICAL suryaprasad9773/react-nginx:$git_c
 # Push image to DockerHub (already logged in)
 docker push suryaprasad9773/react-nginx:$git_commit
 
+# -------------------------------------
+# Update Helm chart repo values.yaml and push changes
+# -------------------------------------
 
-# Save commit ID and upload to GCS (already authenticated)
-echo $git_commit > new_value.txt
-gsutil cp new_value.txt gs://gitcommitids/new_value.txt
+rm -rf helm-chart
+git clone https://github.com/mokadi-suryaprasad/helm-chart.git
+cd helm-chart
 
-# Cleanup
-rm new_value.txt
+# Update values.yaml tag with the new git commit
+sed -i "s/^  tag: .*/  tag: $git_commit/" values.yaml
 
-echo "✅ Deployment completed successfully with commit ID: $git_commit"
+# Git commit and push
+git config user.email "msuryaprasad11@gmail.com"
+git config user.name "Mokadi Surya Prasad"
+git add values.yaml
+git commit -m "chore: update image tag to $git_commit"
+git push origin main
+
+echo "✅ Deployment and Helm chart values.yaml update completed with commit ID: $git_commit"
+
