@@ -36,7 +36,6 @@ gsutil -m cp -r build "gs://buildartifactorydemo/${current_date}/build"
 docker build -t suryaprasad9773/react-nginx:$git_commit -f golddockerfile .
 
 # Trivy Scan
-# -------------------------------------
 echo "[INFO] Running Trivy image scan..."
 trivy image --exit-code 1 --severity CRITICAL suryaprasad9773/react-nginx:$git_commit || {
     echo "❌ Trivy scan failed due to HIGH or CRITICAL vulnerabilities."
@@ -46,12 +45,27 @@ trivy image --exit-code 1 --severity CRITICAL suryaprasad9773/react-nginx:$git_c
 # Push image to DockerHub (already logged in)
 docker push suryaprasad9773/react-nginx:$git_commit
 
-
 # Save commit ID and upload to GCS (already authenticated)
 echo $git_commit > new_value.txt
 gsutil cp new_value.txt gs://gitcommitids/new_value.txt
-
-# Cleanup
 rm new_value.txt
 
-echo "✅ Deployment completed successfully with commit ID: $git_commit"
+# -------------------------------------
+# Update Helm chart repo values.yaml and push changes
+# -------------------------------------
+cd ~
+rm -rf helm-chart
+git clone https://<GITHUB_PAT>@github.com/mokadi-suryaprasad/helm-chart.git
+cd helm-chart
+
+# Update values.yaml tag with the new git commit
+sed -i "s/^  tag: .*/  tag: $git_commit/" values.yaml
+
+# Git commit and push
+git config user.email "msuryaprasad11@gmail.com"
+git config user.name "Mokadi Surya Prasad"
+git add values.yaml
+git commit -m "chore: update image tag to $git_commit"
+git push origin main
+
+echo "✅ Deployment and Helm chart values.yaml update completed with commit ID: $git_commit"
