@@ -18,7 +18,7 @@ cd react-project
 git_commit=$(git rev-parse HEAD)
 
 # Build and tag Docker image
-docker build -t suryaprasad9773/react-nginx:$git_commit -f Dockerfile .
+docker build -t suryaprasad9773/react-nginx:$git_commit -f golddockerfile .
 
 # Push image to DockerHub (already logged in)
 docker push suryaprasad9773/react-nginx:$git_commit
