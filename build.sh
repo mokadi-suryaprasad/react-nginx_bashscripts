@@ -1,22 +1,37 @@
 #!/bin/bash
-set -euo pipefail
 
-# WARNING: Deleting all Docker images is not recommended in most cases!
-sudo docker rmi -f $(sudo docker images -q) || true
+set -e  # Exit immediately on error
 
-# WARNING: Removing entire 'gold' directory can cause data loss if not intended!
-sudo rm -rf gold || true
+# Clean up Docker system (use with caution)
+docker system prune -a -f
 
-sudo mkdir -p gold
-cd gold/
+# Prepare build directory
+rm -rf gold
+mkdir gold
+cd gold
 
-sudo git clone https://github.com/mokadi-suryaprasad/react-project.git
-cd react-project/
+# Clone project repo
+git clone https://github.com/mokadi-suryaprasad/react-project.git
+cd react-project
 
-sudo docker build -t react-nginx -f golddockerfile .
+# Get latest commit ID
+git_commit=$(git rev-parse HEAD)
 
-# Tag the image with your Docker Hub username
-sudo docker tag react-nginx:latest suryaprasad9773/react-nginx:latest
+# Build and tag Docker image
+docker build -t suryaprasad9773/react-nginx:$git_commit -f Dockerfile .
 
-# Push to Docker Hub (make sure you logged in with `docker login`)
-sudo docker push suryaprasad9773/react-nginx:latest
+# Push image to DockerHub (already logged in)
+docker push suryaprasad9773/react-nginx:$git_commit
+
+# Optional: also tag as latest
+docker tag suryaprasad9773/react-nginx:$git_commit suryaprasad9773/react-nginx:latest
+docker push suryaprasad9773/react-nginx:latest
+
+# Save commit ID and upload to GCS (already authenticated)
+echo $git_commit > new_value.txt
+gsutil cp new_value.txt gs://gitcommitids/new_value.txt
+
+# Cleanup
+rm new_value.txt
+
+echo "✅ Deployment completed successfully with commit ID: $git_commit"
