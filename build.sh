@@ -62,7 +62,7 @@ git config user.email "msuryaprasad11@gmail.com"
 git config user.name "Mokadi Surya Prasad"
 git add values.yaml
 git commit -m "chore: update image tag to $git_commit"
-git push origin main
+git push
 
 echo "✅ Deployment and Helm chart values.yaml update completed with commit ID: $git_commit"
 
